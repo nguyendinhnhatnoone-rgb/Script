@@ -1,0 +1,156 @@
+local A = game:GetService("Players")
+local B = game:GetService("UserInputService")
+local C = A.LocalPlayer
+
+-- SỬA LỖI TƯƠNG THÍCH: Ưu tiên PlayerGui để tránh bị Executor chặn quyền CoreGui
+local D = C:WaitForChild("PlayerGui", 10) or (pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui"))
+if not D then return end
+
+local old = D:FindFirstChild("EspVipMenu") if old then old:Destroy() end
+local E = Instance.new("ScreenGui", D) E.Name, E.ResetOnSpawn = "EspVipMenu", false
+
+-- NÚT CHUỐI 🍌 & KHUNG CHÍNH
+local F = Instance.new("TextButton", E)
+F.Size, F.Position, F.Text, F.TextScaled, F.BackgroundColor3, F.TextColor3 = UDim2.new(0, 45, 0, 45), UDim2.new(0, 10, 0.4, 0), "🍌", true, Color3.fromRGB(60, 60, 60), Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", F).CornerRadius = UDim.new(0, 8)
+
+local G = Instance.new("Frame", E)
+G.Size, G.Position, G.BackgroundColor3, G.Visible = UDim2.new(0, 220, 0, 290), UDim2.new(0, 70, 0.4, 0), Color3.fromRGB(25, 25, 25), false
+Instance.new("UICorner", G).CornerRadius = UDim.new(0, 10)
+
+local UIStroke = Instance.new("UIStroke", G) UIStroke.Thickness, UIStroke.ApplyStrokeMode = 2, Enum.ApplyStrokeMode.Border
+
+local H = Instance.new("TextLabel", G)
+H.Size, H.Text, H.TextSize, H.Font, H.TextColor3, H.BackgroundColor3 = UDim2.new(1, 0, 0, 35), "🍌 Esp Vip", 14, Enum.Font.SourceSansBold, Color3.fromRGB(255, 255, 255), Color3.fromRGB(35, 35, 35)
+Instance.new("UICorner", H).CornerRadius = UDim.new(0, 10)
+
+local T, U, V, EspDelay, lockButton = false, 16, 50, 0.5, true
+
+-- HIỆU ỨNG RAINBOW
+task.spawn(function()
+    while task.wait() do
+        local c = Color3.fromHSV((tick() % 5) / 5, 1, 1)
+        if UIStroke and H then UIStroke.Color, H.TextColor3 = c, c end
+    end
+end)
+
+-- HÀM KÉO THẢ DI CHUYỂN MƯỢT MÀ
+local function makeDraggable(obj, anchor)
+    local dragging, input, start, startPos
+    anchor.InputBegan:Connect(function(i)
+        if (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then
+            if obj == F and lockButton then return end
+            dragging, start, startPos = true, i.Position, obj.Position
+            i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    anchor.InputChanged:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then input = i end
+    end)
+    B.InputChanged:Connect(function(i)
+        if i == input and dragging then
+            local d = i.Position - start
+            game:GetService("TweenService"):Create(obj, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            }):Play()
+        end
+    end)
+end
+makeDraggable(G, H) makeDraggable(F, F)
+F.MouseButton1Click:Connect(function() G.Visible = not G.Visible end)
+
+-- NÚT BẬT TẮT ESP
+local O = Instance.new("TextButton", G)
+O.Size, O.Position, O.Text, O.BackgroundColor3, O.TextColor3, O.Font, O.TextSize = UDim2.new(1, -20, 0, 35), UDim2.new(0, 10, 0, 45), "ESP: OFF", Color3.fromRGB(50, 50, 50), Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 13
+Instance.new("UICorner", O).CornerRadius = UDim.new(0, 6)
+
+-- KHUNG NHẬP LIỆU
+local function createInputField(txt, def, y)
+    local frame = Instance.new("Frame", G) frame.Size, frame.Position, frame.BackgroundTransparency = UDim2.new(1, -20, 0, 30), UDim2.new(0, 10, 0, y), 1
+    local lbl = Instance.new("TextLabel", frame) lbl.Size, lbl.Text, lbl.TextColor3, lbl.TextXAlignment, lbl.BackgroundTransparency, lbl.Font, lbl.TextSize = UDim2.new(0, 100, 1, 0), txt, Color3.fromRGB(255, 255, 255), Enum.TextXAlignment.Left, 1, Enum.Font.SourceSansBold, 13
+    local box = Instance.new("TextBox", frame) box.Size, box.Position, box.Text, box.BackgroundColor3, box.TextColor3, box.Font, box.TextSize, box.ClearTextOnFocus = UDim2.new(0, 80, 0, 24), UDim2.new(1, -80, 0.5, -12), tostring(def), Color3.fromRGB(40, 40, 40), Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 13, false
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 4)
+    local s = Instance.new("UIStroke", box) s.Thickness, s.Color = 1, Color3.fromRGB(70, 70, 70)
+    return box
+end
+
+local SpeedBox = createInputField("⚡ Tốc độ:", U, 85)
+local JumpBox = createInputField("🦘 Sức nhảy:", V, 120)
+local DelayBox = createInputField("⏳ Delay ESP:", EspDelay, 155)
+
+SpeedBox.FocusLost:Connect(function() local n = tonumber(SpeedBox.Text) if n then U = math.clamp(n, 0, 200) else SpeedBox.Text = tostring(U) end end)
+JumpBox.FocusLost:Connect(function() local n = tonumber(JumpBox.Text) if n then V = math.clamp(n, 0, 300) else JumpBox.Text = tostring(V) end end)
+DelayBox.FocusLost:Connect(function() local n = tonumber(DelayBox.Text) if n then EspDelay = math.clamp(n, 0.1, 5) else DelayBox.Text = tostring(EspDelay) end end)
+
+-- NÚT TELEPORT
+local TpBtn = Instance.new("TextButton", G)
+TpBtn.Size, TpBtn.Position, TpBtn.Text, TpBtn.BackgroundColor3, TpBtn.TextColor3, TpBtn.Font, TpBtn.TextSize = UDim2.new(0, 95, 0, 32), UDim2.new(0, 10, 0, 195), "🌀 Tele Ngẫu Nhiên", Color3.fromRGB(0, 85, 170), Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 11
+Instance.new("UICorner", TpBtn).CornerRadius = UDim.new(0, 6)
+
+TpBtn.MouseButton1Click:Connect(function()
+    local t = {} for _, p in pairs(A:GetPlayers()) do if p ~= C and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then table.insert(t, p) end end
+    if #t > 0 then
+        local r = t[math.random(1, #t)]
+        local my, tg = C.Character and C.Character:FindFirstChild("HumanoidRootPart"), r.Character:FindFirstChild("HumanoidRootPart")
+        if my and tg then my.CFrame = tg.CFrame * CFrame.new(0, 0, 2) end
+    end
+end)
+
+-- NÚT KHÓA CHUỐI
+local LockBtn = Instance.new("TextButton", G)
+LockBtn.Size, LockBtn.Position, LockBtn.Text, LockBtn.BackgroundColor3, LockBtn.TextColor3, LockBtn.Font, LockBtn.TextSize = UDim2.new(0, 95, 0, 32), UDim2.new(1, -105, 0, 195), "🔒 Khóa Nút 🍌", Color3.fromRGB(100, 50, 50), Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 11
+Instance.new("UICorner", LockBtn).CornerRadius = UDim.new(0, 6)
+
+LockBtn.MouseButton1Click:Connect(function()
+    lockButton = not lockButton
+    LockBtn.Text = lockButton and "🔒 Khóa Nút 🍌" or "🔓 Mở Khóa Nút 🍌"
+    LockBtn.BackgroundColor3 = lockButton and Color3.fromRGB(100, 50, 50) or Color3.fromRGB(50, 100, 50)
+end)
+
+-- CHỮ KÝ
+local W = Instance.new("TextLabel", G)
+W.Size, W.Position, W.Text, W.TextColor3, W.BackgroundTransparency, W.TextSize, W.Font, W.TextXAlignment = UDim2.new(1, -20, 0, 20), UDim2.new(0, 10, 0, 260), "script by dinhnhat", Color3.fromRGB(150, 150, 150), 1, 11, Enum.Font.SourceSansItalic, Enum.TextXAlignment.Right
+
+-- ĐỒNG BỘ CHỈ SỐ NHÂN VẬT (Khắc phục lỗi đứng chỉ số)
+task.spawn(function()
+    while true do 
+        pcall(function()
+            if C.Character then
+                local h = C.Character:FindFirstChildOfClass("Humanoid")
+                if h then
+                    h.UseJumpPower = true
+                    if h.WalkSpeed ~= U then h.WalkSpeed = U end
+                    if h.JumpPower ~= V then h.JumpPower = V end
+                end
+            end
+        end)
+        task.wait(0.3)
+    end 
+end)
+
+-- LOGIC QUÉT ESP HIGHLIGHT
+local function addESP(c)
+    if not c or c:FindFirstChild("CRAB_RAINBOW_ESP") or A:GetPlayerFromCharacter(c) == C then return end
+    local h = Instance.new("Highlight", c)
+    h.Name, h.FillColor, h.OutlineColor, h.FillTransparency, h.OutlineTransparency = "CRAB_RAINBOW_ESP", Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 255, 255), 0.4, 0
+end
+
+local function removeESP(c) if c and c:FindFirstChild("CRAB_RAINBOW_ESP") then c.CRAB_RAINBOW_ESP:Destroy() end end
+
+task.spawn(function()
+    while true do 
+        for _, p in pairs(A:GetPlayers()) do 
+            if p.Character then 
+                if T then addESP(p.Character) else removeESP(p.Character) end 
+            end 
+        end
+        task.wait(EspDelay)
+    end 
+end)
+
+A.PlayerRemoving:Connect(function(p) if p.Character then removeESP(p.Character) end end)
+O.MouseButton1Click:Connect(function() 
+    T = not T 
+    O.Text = T and "ESP: ON" or "ESP: OFF" 
+    O.BackgroundColor3 = T and Color3.fromRGB(0, 140, 0) or Color3.fromRGB(50, 50, 50) 
+end)
